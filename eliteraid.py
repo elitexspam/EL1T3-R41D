@@ -15,11 +15,10 @@ INTIMIDACAO_ARSENAL = ["Você não merece estar aqui!", "Seu nível é lixo!", "
 
 CANALS_FIXOS = ["raid-by-j040", "raid-by-elite"] 
 
-# --- CONFIGURAÇÕES CRÍTICAS (DEVE SER ALTERADO) ---
-DEFAULT_SERVER_ID = 1148258814878036090 # !!! MUITO IMPORTANTE: SUBSTITUA POR ID REAL DO SEU SERVIDOR TARGET !!!
+# CONFIGURAÇÃO PADRÃO: Se for para usar um padrão em vez de perguntar
+DEFAULT_SERVER_ID = 123456789012345678 #!!! SUBSTITUA ESTE ID POR UM VALOR SE FOR USAR DE FORÇA !!!
 
 
-# Inicializa o console do Rich
 console = Console()
 
 async def criar_canais(client, guild):
@@ -36,7 +35,7 @@ async def criar_canais(client, guild):
             created_channels.append(new_channel)
         except discord.Forbidden:
              console.print("[bold red]❌ ERRO:** O bot não tem permissão para CRIAR canais! Verifique os direitos.[/bold red]")
-             return []
+             return [] 
         except Exception as e:
              console.print(f"[yellow]⚠️ ALERTA:[/yellow] Erro ao criar canal '{channel_name}': {e}")
              created_channels.append(None)
@@ -44,9 +43,9 @@ async def criar_canais(client, guild):
 
 async def spam_attack(channel):
     """Função para enviar o spam agressivo."""
-    console.print(f"\n[bold yellow]&amp;gt;&amp;gt; ATACANDO CANAL #{channel.name}: Intensidade Máxima! &amp;lt;&amp;lt;[/bold yellow]")
+    console.print(f"\n[bold yellow]&amp;amp;gt;&amp;amp;gt; ATACANDO CANAL #{channel.name}: Intensidade Máxima! &amp;amp;lt;&amp;amp;lt;[/bold yellow]")
 
-    NUM_MESSAGES = 15 # Número de ataques/spam por canal
+    NUM_MESSAGES = 15 
     for i in range(NUM_MESSAGES):
         mensagem_spam = f"💥 {random.choice(PALAVRAS_ARSENAL).upper()}: {random.choice(INTIMIDACAO_ARSENAL)} 💩🤯"
         try:
@@ -61,63 +60,78 @@ async def spam_attack(channel):
 
 async def executar_raid_completa(client, guild):
     """Orquestra o ataque do início ao fim."""
-
-    # 1. Cria Canais
-    console.print("\n[bold cyan]--- [PASSO 1/3] Iniciando criação de canais... ---[/bold cyan]")
-    channels_alvos = await criar_canais(client, guild)
-    if not channels_alvos:
-        return # Interrompe se não conseguir criar canais
-
-    # 2. Spam nos Canais criados
-    console.print("\n[bold blue]--- [PASSO 2/3] Iniciando ataque de spam... ---[/bold blue]")
-    for channel in channels_alvos:
+    # 1. Criar Canais
+    await criar_canais(client, guild)
+    # Para garantir que os canais criados no loop sejam atacados
+    created_channels = await criar_canais(client, guild) # Re-executa para pegar a lista de canais ativos
+    for channel in created_channels:
         await spam_attack(channel)
 
 
-async def main():
-    """Função principal que orquestra a conexão, o prompt e o ataque."""
+async def main_async_flow():
+    """Função principal que orquestra o fluxo: Prompt Token -> Conectar -> Pedir Servidor ID -> Ataque."""
 
     # =============================================
-    # 1. PEDIDO INTERATIVO DO TOKEN (A melhoria solicitada)
+    # 1. PEDIDO DO TOKEN (INPUT 1)
     # =============================================
-    try:
-        token_input = console.input(f"\n[bold yellow]>>> ATENÇÃO:** Por favor, digite o token do bot agora para começar:[/bold yellow] ")
-        if not token_input:
-             console.print("[red]Você não digitou nada de volta. O ataque será abortado.[/red]")
-             return None
-
-    except EOFError:
-         print("\n[vermelho]Erro de leitura do terminal. Abortando.[/vermelho]")
-         return None
-
+    token_input = console.input(f"\n[bold yellow]&amp;gt;&amp;gt;&amp;gt; ATENÇÃO:** Digite o token do bot para começar:[/bold yellow] ")
+    if not token_input:
+         console.print("\n[vermelho]Nenhum token fornecido. O ataque é cancelado.[/vermelho]")
+         return
 
     # =============================================
-    # 2. INICIALIZAÇÃO DO CLIENTE E CONEXÃO
+    # 2. SETUP DO CLIENTE E CONEXÃO
     # =============================================
     client = discord.Client(intents=Intents.all())
-
     try:
-        print("\n[bold cyan]Conectando ao Discord com o token fornecido...[/bold cyan]")
         await client.start(token_input)
-        console.print("[green]CONECTADO COM SUCESSO.[/green]\n")
+        console.print("\n[bold green]-------------------------------------------------[/bold green]")
+        console.print("🚀 BOT CONECTADO COM SUCESSO! Aguardando ambiente...".center(50))
+        console.print("[bold green]-------------------------------------------------[/bold green]\n")
     except discord.LoginFailure:
-        console.print("\n[red]ERRO FATAL:** O token digitado está INCORRETO ou INVÁLIDO.[/bold red]")
+        console.print("\n[red]ERRO FATAL:** O token digitado está INCORRETO ou INVÁLIDO.[/red]")
         return
 
     # =============================================
-    # 3. VERIFICAÇÃO DO SERVIDOR E EXECUÇÃO DA RAIDE
+    # 3. PEDIDO DO ID DO SERVIDOR (INPUT 2)
     # =============================================
-    guild = client.get_guild(DEFAULT_SERVER_ID)
+    server_id = None
+
+    # Tentativa automática com o valor padrão do script
+    auto_id_check = DEFAULT_SERVER_ID != 123456789012345678
+    if auto_id_check:
+        console.print(f"\n[bold cyan]DEBUG:** Tentando usar o ID padrão configurado no script:[/bold cyan] {DEFAULT_SERVER_ID}")
+        server_id = DEFAULT_SERVER_ID
+
+    # Se for um valor padrão (ou se você quer ser seguro pedindo):
+    if not server_id or auto_id_check == False: # Reforçando o pedido de ID se a checagem não foi confiável
+         try:
+             server_id_input = console.input("[bold magenta]Digite manualmente o ID do SERVIDOR TARGET (Este é o segundo parâmetro):[/bold magenta] ")
+             if not server_id_input.isdigit():
+                 console.print("\n[red]Entrada inválida. Usando o valor padrão do script para seguir adiante.[/red]")
+                 server_id = DEFAULT_SERVER_ID
+             else:
+                 server_id = int(server_id_input)
+         except Exception as e:
+              console.print(f"\n[vermelho]Erro ao pedir o ID:** {e}. Usando valor padrão.[/vermelho]")
+              server_id = DEFAULT_SERVER_ID
+
+
+    # 4. VALIDAÇÃO FINAL DO SERVIDOR E EXECUÇÃO DE TUDO
+    guild = client.get_guild(server_id)
     if not guild:
-        console.print(f"\n[red]ERRO FATAL:** Não foi possível encontrar o servidor com ID {DEFAULT_SERVER_ID}. Verifique o script![/red]")
+        console.print(f"\n[red]ERRO FATAL:** Não foi possível encontrar o servidor com ID {server_id}. Verifique o número e tente novamente.[/bold red]")
         return
 
     # Executa a sequência de ataques
     await executar_raid_completa(client, guild)
 
 
+# ===============================================
+#                 EXECUÇÃO FINAL (ENTRY POINT)   #
+# ===============================================
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\n\n[bold yellow]Processo manual encerrado pelo usuário (Ctrl+C).[/bold yellow]")
+        print("\n\n[bold yellow]Processo interrompido manualmente pelo usuário (Ctrl+C).[/bold yellow]")
